@@ -20,7 +20,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.visualize.queries import (
@@ -53,6 +54,10 @@ def create_app(data_dir: Path | str, static_dir: Path | str = STATIC_DIR) -> Fas
 
     app = FastAPI(title="Kalshi Tape", lifespan=lifespan)
 
+    @app.exception_handler(Exception)
+    def api_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
+
     @app.get("/api/summary")
     def api_summary(request: Request) -> dict[str, Any]:
         return handle_summary(request.app.state.summary)
@@ -78,18 +83,22 @@ def create_app(data_dir: Path | str, static_dir: Path | str = STATIC_DIR) -> Fas
         )
 
     @app.get("/api/event/{event_ticker:path}")
-    def api_event(request: Request, event_ticker: str) -> dict[str, Any]:
+    def api_event(request: Request, event_ticker: str) -> Any:
         status, body = handle_event(request.app.state.con.cursor(), event_ticker)
         if status != 200:
-            raise HTTPException(status_code=status, detail=body.get("error", "error"))
+            return JSONResponse(status_code=status, content=body)
         return body
 
     @app.get("/api/contract/{ticker:path}")
-    def api_contract(request: Request, ticker: str) -> dict[str, Any]:
+    def api_contract(request: Request, ticker: str) -> Any:
         status, body = handle_contract(request.app.state.con.cursor(), ticker)
         if status != 200:
-            raise HTTPException(status_code=status, detail=body.get("error", "error"))
+            return JSONResponse(status_code=status, content=body)
         return body
+
+    @app.get("/api/{_path:path}", include_in_schema=False)
+    def api_not_found(_path: str) -> JSONResponse:
+        return JSONResponse(status_code=404, content={"error": "not found"})
 
     # Mounted LAST so /api/* wins. html=True serves index.html at "/" and assets (js/, css/)
     # directly; StaticFiles guards path traversal, so serve.py's manual check is unneeded.
@@ -108,17 +117,12 @@ def run(
 ) -> None:
     """Launch the explorer with uvicorn (used by ``main.py visualize serve``).
 
-    Production deployments should instead point gunicorn/uvicorn at the import string
-    ``src.visualize.asgi:app`` (see the Dockerfile), which reads ``SITE_DATA_DIR``.
+    Production deployments should instead point uvicorn at the factory import string
+    ``src.visualize.asgi:create_app`` with ``--factory`` (see the Dockerfile).
     """
-    import os
     import webbrowser
 
     import uvicorn
-
-    # The asgi:app import target reads this; set it before uvicorn spawns reload/worker
-    # subprocesses so they inherit it.
-    os.environ["SITE_DATA_DIR"] = str(Path(data_dir))
 
     url = f"http://{host}:{port}"
     print(f"Kalshi contract explorer serving at {url}")
@@ -130,4 +134,19 @@ def run(
         except Exception:  # noqa: BLE001 - opening a browser is best-effort
             pass
 
-    uvicorn.run("src.visualize.asgi:app", host=host, port=port, workers=workers, reload=reload)
+    if reload or workers > 1:
+        import os
+
+        # Reload/workers require an import string so child processes can import the app.
+        os.environ["SITE_DATA_DIR"] = str(Path(data_dir))
+        uvicorn.run(
+            "src.visualize.asgi:create_app",
+            host=host,
+            port=port,
+            workers=workers,
+            reload=reload,
+            factory=True,
+        )
+        return
+
+    uvicorn.run(create_app(data_dir), host=host, port=port)

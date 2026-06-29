@@ -30,5 +30,5 @@ COPY output/site/data /app/output/site/data
 ENV SITE_DATA_DIR=/app/output/site/data
 
 EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "src.visualize.asgi:app", \
+CMD ["uv", "run", "uvicorn", "src.visualize.asgi:create_app", "--factory", \
      "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

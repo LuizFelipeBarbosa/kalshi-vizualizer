@@ -45,8 +45,13 @@ def build_connection(data_dir: Path | str) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(":memory:")
     for view in ("events", "contracts", "price_series"):
         path = data_dir / f"{view}.parquet"
-        con.execute(f"CREATE VIEW {view} AS SELECT * FROM read_parquet('{path}')")
+        con.execute(f"CREATE VIEW {view} AS SELECT * FROM read_parquet({_sql_string(path)})")
     return con
+
+
+def _sql_string(value: Path | str) -> str:
+    """Return a DuckDB SQL string literal for statements that cannot be prepared."""
+    return "'" + str(value).replace("'", "''") + "'"
 
 
 def load_summary(data_dir: Path | str) -> dict[str, Any]:

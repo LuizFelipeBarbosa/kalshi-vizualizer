@@ -8,6 +8,7 @@ build. The API is tested through ``dispatch`` directly — no socket is ever bou
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import duckdb
@@ -121,6 +122,21 @@ def test_dispatch_unknown_route(built: Path) -> None:
     summary = load_summary(built)
     status, body = dispatch(con, summary, "/api/nope", {})
     assert status == 404
+    assert body == {"error": "not found"}
+
+
+def test_build_connection_accepts_quoted_data_dir(built: Path, tmp_path: Path) -> None:
+    quoted_dir = tmp_path / "user's site"
+    quoted_dir.mkdir()
+    for name in ("events.parquet", "contracts.parquet", "price_series.parquet", "summary.json"):
+        shutil.copy2(built / name, quoted_dir / name)
+
+    con = build_connection(quoted_dir)
+    try:
+        n_events = con.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    finally:
+        con.close()
+    assert n_events == 2
 
 
 def test_search_is_injection_safe(built: Path) -> None:

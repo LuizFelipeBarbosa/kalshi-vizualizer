@@ -3,9 +3,9 @@
 .git
 .venv
 data
-output
-!output/site
-!output/site/data
+output/*
+!output/site/
+!output/site/**
 __pycache__
 *.pyc
 .pytest_cache

@@ -60,8 +60,44 @@ def test_event_and_contract(client: TestClient) -> None:
     contract = client.get("/api/contract/MKT-A").json()
     assert contract["ticker"] == "MKT-A" and len(contract["points"]) > 0
 
-    assert client.get("/api/contract/DOES-NOT-EXIST").status_code == 404
-    assert client.get("/api/event/NOPE").status_code == 404
+    missing_contract = client.get("/api/contract/DOES-NOT-EXIST")
+    assert missing_contract.status_code == 404
+    assert missing_contract.json() == {"error": "contract not found"}
+
+    missing_event = client.get("/api/event/NOPE")
+    assert missing_event.status_code == 404
+    assert missing_event.json() == {"error": "event not found"}
+
+
+def test_unknown_api_route_returns_json_error(client: TestClient) -> None:
+    r = client.get("/api/nope")
+    assert r.status_code == 404
+    assert r.json() == {"error": "not found"}
+
+
+def test_unexpected_api_errors_return_json(
+    tmp_path: Path,
+    kalshi_trades_dir: Path,
+    kalshi_markets_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out = tmp_path / "data"
+    build_site_dataset(
+        trades_dir=kalshi_trades_dir,
+        markets_dir=kalshi_markets_dir,
+        out_dir=out,
+        n_buckets=50,
+    )
+
+    def raise_error(_summary: dict[str, object]) -> dict[str, object]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("src.visualize.app.handle_groups", raise_error)
+    with TestClient(create_app(out), raise_server_exceptions=False) as c:
+        r = c.get("/api/groups")
+
+    assert r.status_code == 500
+    assert r.json() == {"error": "boom"}
 
 
 def test_search_is_injection_safe(client: TestClient) -> None:

@@ -74,10 +74,10 @@ By default the explorer covers the Kalshi contracts that have traded (the ones w
 
 #### Deploying as a web app
 
-For production, point uvicorn (or gunicorn) at the ASGI entrypoint `src.visualize.asgi:app`; the dataset location comes from the `SITE_DATA_DIR` environment variable (default `output/site/data`):
+For production, point uvicorn at the ASGI factory `src.visualize.asgi:create_app` with `--factory`; the dataset location comes from the `SITE_DATA_DIR` environment variable (default `output/site/data`):
 
 ```bash
-SITE_DATA_DIR=/data/site uvicorn src.visualize.asgi:app --host 0.0.0.0 --port 8000 --workers 4
+SITE_DATA_DIR=/data/site uvicorn src.visualize.asgi:create_app --factory --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 A `Dockerfile` is included that bakes the prebuilt site dataset into the image and serves it with four workers. Build the dataset first, then the image:
