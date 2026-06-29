@@ -132,26 +132,49 @@ def package():
     sys.exit(0 if success else 1)
 
 
+def _parse_positive_int(args: list[str], flag: str, default: int) -> int:
+    if flag not in args:
+        return default
+
+    index = args.index(flag)
+    if index + 1 >= len(args):
+        print(f"{flag} requires an integer value.")
+        sys.exit(2)
+
+    raw_value = args[index + 1]
+    try:
+        value = int(raw_value)
+    except ValueError:
+        print(f"{flag} must be an integer, got {raw_value!r}.")
+        sys.exit(2)
+
+    if value < 1:
+        print(f"{flag} must be at least 1, got {value}.")
+        sys.exit(2)
+    return value
+
+
 def visualize(args: list[str]):
     """Build and/or serve the interactive Kalshi contract explorer.
 
     Usage:
-        visualize                    build the site dataset, then serve it
-        visualize build              one-time build pass only
-        visualize serve [--port N]   serve an already-built dataset
+        visualize                                       build the site dataset, then serve it
+        visualize build                                 one-time build pass only
+        visualize serve [--port N] [--workers N] [--reload]   serve an already-built dataset
+
+    Serving runs the FastAPI app (src/visualize/app.py) under uvicorn. For production, point
+    uvicorn at src.visualize.asgi:create_app with --factory (see the Dockerfile).
     """
     # Imports are local so `main.py` stays light and free of import-time side effects.
+    from src.visualize.app import run
     from src.visualize.build import build_site_dataset
-    from src.visualize.serve import run_server
 
     data_dir = Path("output") / "site" / "data"
     sub = args[0] if args else None
 
-    port = 8000
-    if "--port" in args:
-        i = args.index("--port")
-        if i + 1 < len(args):
-            port = int(args[i + 1])
+    port = _parse_positive_int(args, "--port", 8000)
+    workers = _parse_positive_int(args, "--workers", 1)
+    reload = "--reload" in args
 
     if sub == "build":
         print("Building site dataset...")
@@ -163,13 +186,13 @@ def visualize(args: list[str]):
         if not data_dir.exists():
             print(f"No built dataset at {data_dir}. Run 'visualize build' first.")
             sys.exit(1)
-        run_server(port=port, data_dir=data_dir)
+        run(data_dir=data_dir, port=port, workers=workers, reload=reload)
         return
 
     # Default: build then serve.
     print("Building site dataset...")
     build_site_dataset(out_dir=data_dir)
-    run_server(port=port, data_dir=data_dir)
+    run(data_dir=data_dir, port=port, workers=workers, reload=reload)
 
 
 def main():

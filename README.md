@@ -52,23 +52,43 @@ This opens an interactive menu to select which analysis to run. You can run all 
 
 ### Interactive Visualization
 
-Explore Kalshi contracts in a local web app — grouped by event, with each contract's price movement over its lifetime and a main overview page covering all contracts:
+Explore Kalshi contracts in a web app — grouped by event, with each contract's price movement over its lifetime and a main overview page covering all contracts:
 
 ```bash
 make visualize
 ```
 
-This first distills the Kalshi trade data into a compact "site dataset" under `output/site/data/`, then serves a static frontend (stdlib server, no extra dependencies) at `http://127.0.0.1:8000` with three views: an overview of every event, an event view overlaying its contracts' price lines, and a per-contract price + volume chart.
+This first distills the Kalshi trade data into a compact "site dataset" under `output/site/data/`, then serves the explorer — a [FastAPI](https://fastapi.tiangolo.com/) app fronting the static UI — at `http://127.0.0.1:8000` with three views: an overview of every event, an event view overlaying its contracts' price lines, and a per-contract price + volume chart. The API queries the distilled Parquet directly with DuckDB.
 
 Build and serve can also be run separately:
 
 ```bash
-make visualize-build                        # build output/site/data/ only
-make visualize-serve                        # serve on the default port (8000)
-uv run main.py visualize serve --port 9000  # serve on a custom port
+make visualize-build                            # build output/site/data/ only
+make visualize-serve                            # serve on the default port (8000)
+uv run main.py visualize serve --port 9000      # custom port
+uv run main.py visualize serve --reload         # auto-reload (development)
+uv run main.py visualize serve --workers 4      # multiple uvicorn workers
 ```
 
 By default the explorer covers the Kalshi contracts that have traded (the ones with a price history to show); the build distills the full ~72M trades in seconds.
+
+#### Deploying as a web app
+
+For production, point uvicorn at the ASGI factory `src.visualize.asgi:create_app` with `--factory`; the dataset location comes from the `SITE_DATA_DIR` environment variable (default `output/site/data`):
+
+```bash
+SITE_DATA_DIR=/data/site uvicorn src.visualize.asgi:create_app --factory --host 0.0.0.0 --port 8000 --workers 4
+```
+
+A `Dockerfile` is included that bakes the prebuilt site dataset into the image and serves it with four workers. Build the dataset first, then the image:
+
+```bash
+uv run main.py visualize build      # writes output/site/data/
+docker build -t kalshi-tape .
+docker run -p 8000:8000 kalshi-tape
+```
+
+DuckDB queries the Parquet files in place, so each worker holds its own read-only connection. For datasets too large to bake into the image, mount a volume at `SITE_DATA_DIR` or have the build read Parquet from object storage (`s3://…`) instead. The original stdlib server (`src/visualize/serve.py`) remains as a zero-dependency fallback.
 
 ### Packaging Data
 
