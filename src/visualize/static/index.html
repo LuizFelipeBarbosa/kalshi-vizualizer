@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalshi · Tape</title>
+  <link rel="stylesheet" href="css/uplot.min.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="#/">KALSHI<span class="wordmark-dot">·</span>TAPE</a>
+    <nav class="crumbs" id="crumbs"></nav>
+    <div class="topbar-spacer"></div>
+    <div class="range" id="range"></div>
+  </header>
+
+  <main id="app-main" class="app-main">
+    <div class="loading">Loading…</div>
+  </main>
+
+  <!-- uPlot is a UMD build: load it first so it attaches window.uPlot, then the app module. -->
+  <script src="js/uplot.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

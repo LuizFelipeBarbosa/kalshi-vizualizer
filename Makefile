@@ -1,4 +1,4 @@
-.PHONY: analyze run index package lint format test setup
+.PHONY: analyze run index package visualize visualize-build visualize-serve lint format test setup
 
 RUN = uv run main.py
 
@@ -13,6 +13,15 @@ index:
 
 package:
 	$(RUN) package
+
+visualize:
+	$(RUN) visualize
+
+visualize-build:
+	$(RUN) visualize build
+
+visualize-serve:
+	$(RUN) visualize serve $(filter-out $@,$(MAKECMDGOALS))
 
 lint:
 	uv run ruff check .
