@@ -14,6 +14,7 @@ Currently supported features:
 - Trade history collection via API and blockchain
 - Parquet-based storage with automatic progress saving
 - Extensible analysis script framework
+- Interactive web explorer for browsing Kalshi contracts grouped by event, with per-contract price history
 
 ## Installation & Usage
 
@@ -49,6 +50,26 @@ make analyze
 
 This opens an interactive menu to select which analysis to run. You can run all analyses or select a specific one. Output files (PNG, PDF, CSV, JSON) are saved to `output/`.
 
+### Interactive Visualization
+
+Explore Kalshi contracts in a local web app — grouped by event, with each contract's price movement over its lifetime and a main overview page covering all contracts:
+
+```bash
+make visualize
+```
+
+This first distills the Kalshi trade data into a compact "site dataset" under `output/site/data/`, then serves a static frontend (stdlib server, no extra dependencies) at `http://127.0.0.1:8000` with three views: an overview of every event, an event view overlaying its contracts' price lines, and a per-contract price + volume chart.
+
+Build and serve can also be run separately:
+
+```bash
+make visualize-build                        # build output/site/data/ only
+make visualize-serve                        # serve on the default port (8000)
+uv run main.py visualize serve --port 9000  # serve on a custom port
+```
+
+By default the explorer covers the Kalshi contracts that have traded (the ones with a price history to show); the build distills the full ~72M trades in seconds.
+
 ### Packaging Data
 
 To compress the data directory for storage/distribution:
@@ -69,6 +90,7 @@ This creates a zstd-compressed tar archive (`data.tar.zst`) and removes the `dat
 │   ├── indexers/           # Data collection indexers
 │   │   ├── kalshi/         # Kalshi API client and indexers
 │   │   └── polymarket/     # Polymarket API/blockchain indexers
+│   ├── visualize/          # Interactive Kalshi contract explorer (build + server + web UI)
 │   └── common/             # Shared utilities and interfaces
 ├── data/                   # Data directory (extracted from data.tar.zst)
 │   ├── kalshi/
@@ -79,7 +101,7 @@ This creates a zstd-compressed tar archive (`data.tar.zst`) and removes the `dat
 │       ├── markets/
 │       └── trades/
 ├── docs/                   # Documentation
-└── output/                 # Analysis outputs (figures, CSVs)
+└── output/                 # Analysis outputs (figures, CSVs) and the explorer dataset (output/site/)
 ```
 
 ## Documentation
