@@ -4,9 +4,9 @@ export default function NotFoundView() {
   const { pathname } = useLocation();
   return (
     <div className="py-12 text-center font-mono text-ink-2">
-      <p>{pathname} isn't migrated yet — the overview lands next.</p>
+      <p>Nothing at {pathname}.</p>
       <Link to="/" className="text-ink-1 hover:text-ink-0">
-        ‹ home
+        ‹ all events
       </Link>
     </div>
   );

@@ -31,3 +31,4 @@ output
 
 # Node (frontend/)
 node_modules
+*.tsbuildinfo

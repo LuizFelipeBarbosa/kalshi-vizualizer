@@ -1,9 +1,10 @@
 // TanStack Query hooks — one per API endpoint. The dataset is a static build,
 // so responses never go stale within a session.
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { ApiError, fetchContract, fetchEvent, fetchSummary } from "./client";
+import { ApiError, fetchContract, fetchEvent, fetchEvents, fetchSummary } from "./client";
+import type { EventsParams } from "./types";
 
 // A 404 is a real answer ("no such ticker"), not a transient failure.
 function noRetryOn404(failureCount: number, error: Error): boolean {
@@ -15,6 +16,17 @@ export function useSummary() {
     queryKey: ["summary"],
     queryFn: ({ signal }) => fetchSummary(signal),
     staleTime: Infinity,
+  });
+}
+
+export function useEvents(params: EventsParams) {
+  return useQuery({
+    queryKey: ["events", params.group, params.q, params.sort, params.page],
+    queryFn: ({ signal }) => fetchEvents(params, signal),
+    staleTime: Infinity,
+    // Keep the previous page's rows on screen while the next one loads,
+    // like the vanilla overview did (the search box shows the progress bar).
+    placeholderData: keepPreviousData,
   });
 }
 

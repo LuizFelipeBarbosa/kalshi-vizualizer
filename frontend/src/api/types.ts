@@ -21,6 +21,36 @@ export interface Summary {
   groups: GroupRollup[];
 }
 
+export interface EventSummary {
+  event_ticker: string;
+  group: string | null;
+  category: string | null;
+  subcategory: string | null;
+  color: string | null;
+  sample_title: string | null;
+  n_contracts: number | null;
+  n_traded_contracts: number | null;
+  total_volume: number | null;
+  first_trade: number | null;
+  last_trade: number | null;
+  has_open: boolean | null;
+}
+
+export interface EventsPage {
+  events: EventSummary[];
+  page: number;
+  page_size: number;
+  total_pages: number;
+  total: number;
+}
+
+export interface EventsParams {
+  group: string;
+  q: string;
+  sort: string;
+  page: number;
+}
+
 export interface PricePoint {
   t: number;
   price: number;

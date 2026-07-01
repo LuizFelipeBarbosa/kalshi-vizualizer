@@ -4,8 +4,8 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import ContractView from "./views/ContractView";
 import EventView from "./views/EventView";
-import HomeView from "./views/HomeView";
 import NotFoundView from "./views/NotFoundView";
+import OverviewView from "./views/OverviewView";
 
 // The vanilla router scrolled to the top on every navigation; BrowserRouter doesn't.
 function ScrollToTop() {
@@ -22,7 +22,7 @@ export default function App() {
       <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<HomeView />} />
+          <Route path="/" element={<OverviewView />} />
           <Route path="/event/:ticker" element={<EventView />} />
           <Route path="/contract/:ticker" element={<ContractView />} />
           <Route path="*" element={<NotFoundView />} />

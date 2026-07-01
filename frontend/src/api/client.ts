@@ -1,7 +1,7 @@
 // Thin typed fetch wrappers over the JSON API. Caching, deduplication and
 // abort handling belong to TanStack Query (see queries.ts), not this layer.
 
-import type { ContractDetail, EventDetail, Summary } from "./types";
+import type { ContractDetail, EventDetail, EventsPage, EventsParams, Summary } from "./types";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -30,6 +30,15 @@ async function getJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
 
 export function fetchSummary(signal?: AbortSignal): Promise<Summary> {
   return getJSON("/api/summary", signal);
+}
+
+export function fetchEvents({ group, q, sort, page }: EventsParams, signal?: AbortSignal): Promise<EventsPage> {
+  const params = new URLSearchParams();
+  if (group) params.set("group", group);
+  if (q) params.set("q", q);
+  if (sort) params.set("sort", sort);
+  if (page > 1) params.set("page", String(page));
+  return getJSON(`/api/events?${params.toString()}`, signal);
 }
 
 export function fetchEvent(eventTicker: string, signal?: AbortSignal): Promise<EventDetail> {
