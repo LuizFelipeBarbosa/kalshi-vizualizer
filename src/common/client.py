@@ -23,11 +23,33 @@ def _is_retryable(exc: BaseException) -> bool:
     return False
 
 
+class RateLimiter:
+    """Thread-safe fixed-interval request limiter."""
+
+    def __init__(self, rate_limit: float):
+        self._rate_limit = rate_limit
+        self._lock = threading.Lock()
+        self._last_request: float = 0
+
+    def wait(self) -> None:
+        if self._rate_limit <= 0:
+            return
+
+        interval = 1.0 / self._rate_limit
+        with self._lock:
+            now = time.monotonic()
+            wait = self._last_request + interval - now
+            if wait > 0:
+                time.sleep(wait)
+            self._last_request = time.monotonic()
+
+
 class HttpClient:
     """HTTP client with rate limiting, retries, and connection pooling.
 
     Args:
         rate_limit: Max requests per second (0 = unlimited).
+        rate_limiter: Optional shared limiter. Use this to coordinate rate limits across client instances.
         max_retries: Number of retry attempts for transient errors.
         timeout: Request timeout in seconds.
         max_connections: Connection pool size.
@@ -42,11 +64,10 @@ class HttpClient:
         timeout: float = 30.0,
         max_connections: int = 20,
         base_url: str = "",
+        rate_limiter: Optional[RateLimiter] = None,
     ):
-        self._rate_limit = rate_limit
         self._max_retries = max_retries
-        self._lock = threading.Lock()
-        self._last_request: float = 0
+        self._rate_limiter = rate_limiter or RateLimiter(rate_limit)
 
         self._client = httpx.Client(
             base_url=base_url,
@@ -67,15 +88,7 @@ class HttpClient:
         self._client.close()
 
     def _throttle(self):
-        if self._rate_limit <= 0:
-            return
-        interval = 1.0 / self._rate_limit
-        with self._lock:
-            now = time.monotonic()
-            wait = self._last_request + interval - now
-            if wait > 0:
-                time.sleep(wait)
-            self._last_request = time.monotonic()
+        self._rate_limiter.wait()
 
     def get(self, url: str, *, params: Optional[dict] = None) -> Union[dict, list]:
         return self._request("GET", url, params=params)

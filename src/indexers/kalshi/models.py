@@ -40,7 +40,7 @@ class Trade:
             count=parse_float_string_to_int(data.get("count_fp")),
             yes_price=parse_dollars_to_cents(data.get("yes_price_dollars")),
             no_price=parse_dollars_to_cents(data.get("no_price_dollars")),
-            taker_side=data.get("taker_side", ""),
+            taker_side=data.get("taker_outcome_side") or data.get("taker_side", ""),
             created_time=parse_datetime(data["created_time"]),
         )
 
