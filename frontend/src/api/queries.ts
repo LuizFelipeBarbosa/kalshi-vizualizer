@@ -3,7 +3,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { ApiError, fetchContract, fetchEvent, fetchEvents, fetchSummary } from "./client";
+import { ApiError, fetchContract, fetchEvent, fetchEvents, fetchHighlights, fetchSummary } from "./client";
 import type { EventsParams } from "./types";
 
 // A 404 is a real answer ("no such ticker"), not a transient failure.
@@ -30,12 +30,21 @@ export function useEvents(params: EventsParams) {
   });
 }
 
-export function useEvent(eventTicker: string) {
+export function useHighlights() {
+  return useQuery({
+    queryKey: ["highlights"],
+    queryFn: ({ signal }) => fetchHighlights(signal),
+    staleTime: Infinity,
+  });
+}
+
+export function useEvent(eventTicker: string, enabled = true) {
   return useQuery({
     queryKey: ["event", eventTicker],
     queryFn: ({ signal }) => fetchEvent(eventTicker, signal),
     staleTime: Infinity,
     retry: noRetryOn404,
+    enabled: enabled && eventTicker.length > 0,
   });
 }
 

@@ -10,8 +10,9 @@ import type { EventContract } from "../api/types";
 import { Chip } from "../components/Chip";
 import EventChart, { overlaySeries } from "../components/EventChart";
 import type { EventChartHandle } from "../components/EventChart";
+import Sparkline from "../components/Sparkline";
 import { ErrorNote, Loading } from "../components/Status";
-import { fmtCompact, fmtInt, fmtPct, fmtRange, liftAccent } from "../lib/format";
+import { fmtCents, fmtCompact, fmtInt, fmtRange, liftAccent } from "../lib/format";
 
 const FALLBACK_ACCENT = "#9aa3b2";
 
@@ -20,6 +21,15 @@ export default function EventView() {
   const query = useEvent(ticker);
   const chartRef = useRef<EventChartHandle>(null);
   const overlay = useMemo(() => (query.data ? overlaySeries(query.data) : null), [query.data]);
+  // Row sparklines reuse the overlay payload: same points, same palette color as the
+  // chart line each row highlights on hover — zero extra network.
+  const rowSeries = useMemo(() => {
+    if (!overlay) return null;
+    return {
+      points: new Map(overlay.series.map((s) => [s.ticker, s.points])),
+      colors: new Map(overlay.labels.map((l) => [l.ticker, l.color])),
+    };
+  }, [overlay]);
 
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorNote error={query.error} />;
@@ -62,36 +72,52 @@ export default function EventView() {
           <p className="m-0 text-2xs uppercase tracking-[0.12em] text-ink-1">Contracts</p>
         </div>
         <div className="mt-4 border-t border-line">
-          {data.contracts.map((c) => (
-            <Link
-              key={c.ticker}
-              to={`/contract/${encodeURIComponent(c.ticker)}`}
-              onMouseEnter={() => chartRef.current?.focusSeries(c.ticker)}
-              onMouseLeave={() => chartRef.current?.focusSeries(null)}
-              className="group flex cursor-pointer items-center gap-4 border-b border-l-[3px] border-line border-l-transparent px-2 py-3 transition-colors hover:bg-bg-1"
-            >
-              <span className="min-w-0 flex-1 truncate">{c.title || c.ticker}</span>
-              <span className="w-[110px] shrink-0 text-2xs uppercase tracking-[0.06em] text-ink-1">
-                {statusLabel(c)}
-              </span>
-              <span className="w-24 shrink-0 text-right font-mono text-sm text-ink-1 tabular-nums">
-                {c.last_yes_price != null ? fmtPct(c.last_yes_price) : "—"}
-              </span>
-              <span className="w-24 shrink-0 text-right font-mono text-sm text-ink-0 tabular-nums">
-                {fmtCompact(c.traded_volume)}
-              </span>
-              <span className="w-4 text-right text-ink-2 transition-transform group-hover:translate-x-[2px] group-hover:text-ink-0">
-                →
-              </span>
-            </Link>
-          ))}
+          {data.contracts.map((c) => {
+            const pts = rowSeries?.points.get(c.ticker);
+            return (
+              <Link
+                key={c.ticker}
+                to={`/contract/${encodeURIComponent(c.ticker)}`}
+                onMouseEnter={() => chartRef.current?.focusSeries(c.ticker)}
+                onMouseLeave={() => chartRef.current?.focusSeries(null)}
+                className="group flex cursor-pointer items-center gap-4 border-b border-l-[3px] border-line border-l-transparent px-2 py-3 transition-colors hover:bg-bg-1"
+              >
+                <span className="min-w-0 flex-1 truncate">{c.title || c.ticker}</span>
+                <span className="hidden w-[90px] shrink-0 sm:block">
+                  {pts && pts.length > 1 && (
+                    <Sparkline
+                      points={pts}
+                      stroke={rowSeries?.colors.get(c.ticker) ?? "#5c6575"}
+                      width={90}
+                      height={22}
+                      className="h-[22px] w-full opacity-70 transition-opacity group-hover:opacity-100"
+                    />
+                  )}
+                </span>
+                <span className="w-[110px] shrink-0 text-right">
+                  <StatusCell contract={c} />
+                </span>
+                <span className="w-24 shrink-0 text-right font-mono text-sm text-ink-1 tabular-nums">
+                  {c.last_yes_price != null ? fmtCents(c.last_yes_price) : "—"}
+                </span>
+                <span className="w-24 shrink-0 text-right font-mono text-sm text-ink-0 tabular-nums">
+                  {fmtCompact(c.traded_volume)}
+                </span>
+                <span className="w-4 text-right text-ink-2 transition-transform group-hover:translate-x-[2px] group-hover:text-ink-0">
+                  →
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </>
   );
 }
 
-function statusLabel(c: EventContract): string {
-  if (c.status === "finalized" && c.result) return "settled " + c.result;
-  return c.status || "";
+function StatusCell({ contract: c }: { contract: EventContract }) {
+  if (c.status === "finalized" && (c.result === "yes" || c.result === "no")) {
+    return <Chip tone={c.result === "yes" ? "yes" : "no"}>{c.result}</Chip>;
+  }
+  return <Chip>{c.status || "—"}</Chip>;
 }

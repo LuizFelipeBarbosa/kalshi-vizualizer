@@ -16,6 +16,7 @@ DuckDB views are ``read_parquet`` globs (lazy scans), so per-worker memory stays
 
 from __future__ import annotations
 
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
@@ -30,6 +31,7 @@ from src.visualize.queries import (
     handle_event,
     handle_events,
     handle_groups,
+    handle_highlights,
     handle_summary,
     load_summary,
 )
@@ -47,6 +49,10 @@ def create_app(data_dir: Path | str, static_dir: Path | str = STATIC_DIR) -> Fas
         # Opened on startup (never at import), torn down on shutdown.
         app.state.con = build_connection(data_dir)
         app.state.summary = load_summary(data_dir)
+        # Highlights are static per dataset but cost a price_series scan, so they are
+        # computed lazily on first request and cached for the process lifetime.
+        app.state.highlights = None
+        app.state.highlights_lock = threading.Lock()
         try:
             yield
         finally:
@@ -81,6 +87,17 @@ def create_app(data_dir: Path | str, static_dir: Path | str = STATIC_DIR) -> Fas
             request.app.state.con.cursor(),
             {"group": group, "q": q, "sort": sort, "page": str(page), "page_size": str(page_size)},
         )
+
+    @app.get("/api/highlights")
+    def api_highlights(request: Request) -> dict[str, Any]:
+        # Sync def -> threadpool, so guard the one-time compute with a double-checked
+        # lock; concurrent first hits would otherwise each run the DuckDB pass.
+        state = request.app.state
+        if state.highlights is None:
+            with state.highlights_lock:
+                if state.highlights is None:
+                    state.highlights = handle_highlights(state.con.cursor())
+        return state.highlights
 
     @app.get("/api/event/{event_ticker:path}")
     def api_event(request: Request, event_ticker: str) -> Any:

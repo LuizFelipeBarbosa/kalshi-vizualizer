@@ -8,6 +8,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { useEvents, useSummary } from "../api/queries";
 import type { EventsPage, EventsParams, EventSummary } from "../api/types";
+import Spotlight from "../components/Spotlight";
 import { ErrorNote, Loading } from "../components/Status";
 import { fmtCompact, fmtInt, liftAccent } from "../lib/format";
 
@@ -86,6 +87,8 @@ export default function OverviewView() {
         <Stat value={fmtCompact(summary.total_volume)} label="Volume" />
         <Stat value={fmtCompact(summary.n_trades)} label="Trades" />
       </div>
+
+      <Spotlight />
 
       <div className="mt-12">
         <div className="mb-4 flex items-baseline gap-4 border-b border-line pb-2">

@@ -57,6 +57,46 @@ export interface PricePoint {
   volume: number;
 }
 
+// Minimal point for sparklines; PricePoint satisfies it structurally.
+export interface SparkPoint {
+  t: number;
+  price: number;
+}
+
+// One spotlight item from /api/highlights. Flat stats mirror the backend row;
+// `category` is an open set — the UI must degrade gracefully on unknown tags.
+export interface Highlight {
+  category: string;
+  rank: number;
+  ticker: string;
+  event_ticker: string | null;
+  title: string | null;
+  status: string | null;
+  result: string | null;
+  group: string | null;
+  color: string | null;
+  traded_volume: number;
+  n_trades: number;
+  first_trade: number | null;
+  last_trade: number | null;
+  duration_s: number | null;
+  min_price: number;
+  max_price: number;
+  price_range: number;
+  vwap: number | null;
+  min_price_t: number | null;
+  max_price_t: number | null;
+  first_price: number;
+  last_price: number;
+  last_yes_price: number | null;
+  sparkline: SparkPoint[];
+}
+
+export interface HighlightsResponse {
+  highlights: Highlight[];
+  categories: string[];
+}
+
 export interface SeriesEntry {
   ticker: string;
   points: PricePoint[];

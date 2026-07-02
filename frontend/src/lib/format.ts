@@ -18,9 +18,23 @@ export function fmtCompact(n: number | null | undefined): string {
   return String(Math.round(n));
 }
 
-export function fmtPct(cents: number | null | undefined): string {
+export function fmtCents(cents: number | null | undefined): string {
   if (cents == null) return "—";
-  return Math.round(cents) + "%";
+  return Math.round(cents) + "¢";
+}
+
+// Human span between two epoch-second timestamps, in an honest unit: a 15-minute
+// blitz market reads "15 min", not "1 days".
+export function fmtDuration(a: number | null | undefined, b: number | null | undefined): string | null {
+  if (a == null || b == null || b < a) return null;
+  const s = b - a;
+  if (s < 3_600) return Math.max(1, Math.round(s / 60)) + " min";
+  if (s < 86_400) {
+    const h = Math.round(s / 3_600);
+    return h + (h === 1 ? " hour" : " hours");
+  }
+  const d = Math.round(s / 86_400);
+  return d.toLocaleString("en-US") + (d === 1 ? " day" : " days");
 }
 
 function toDate(epochSec: number): Date {

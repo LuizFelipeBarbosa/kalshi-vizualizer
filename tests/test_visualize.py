@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 
 from src.visualize.build import build_site_dataset
-from src.visualize.queries import build_connection, dispatch, load_summary
+from src.visualize.queries import _thin_points, build_connection, dispatch, load_summary
 
 
 @pytest.fixture
@@ -115,6 +115,46 @@ def test_dispatch_event_and_contract(built: Path) -> None:
 
     status, body = dispatch(con, summary, "/api/contract/DOES-NOT-EXIST", {})
     assert status == 404
+
+
+def test_dispatch_highlights(built: Path) -> None:
+    con = build_connection(built)
+    summary = load_summary(built)
+    status, body = dispatch(con, summary, "/api/highlights", {})
+    assert status == 200
+
+    items = body["highlights"]
+    # Both fixture contracts qualify somewhere, and dedup means each appears exactly once.
+    assert {i["ticker"] for i in items} == {"MKT-A", "MKT-B"}
+    assert len(items) == 2
+
+    by_ticker = {i["ticker"]: i for i in items}
+    # MKT-B settled NO after trading at 90c (over > 1 day) -> "stunner" claims it.
+    assert by_ticker["MKT-B"]["category"] == "stunner"
+    # MKT-A (settled YES, flat-at-90 series: range 0, vwap 90, < 90 days) fails every
+    # story threshold and falls through to the threshold-free "whale" catch-all.
+    assert by_ticker["MKT-A"]["category"] == "whale"
+    assert set(body["categories"]) >= {i["category"] for i in items}
+
+    for item in items:
+        assert item["group"] and item["color"]  # events join worked
+        assert 0 < len(item["sparkline"]) <= 60
+        assert set(item["sparkline"][0]) == {"t", "price"}
+        assert item["min_price"] <= item["last_price"] <= item["max_price"]
+        assert item["first_trade"] <= item["min_price_t"] <= item["last_trade"]
+        assert item["rank"] == 1
+        assert item["duration_s"] > 0
+
+
+def test_thin_points_keeps_endpoints() -> None:
+    points = [{"t": i, "price": i % 100} for i in range(200)]
+    thinned = _thin_points(points, max_points=60)
+    assert len(thinned) <= 61  # stride result + preserved final point
+    assert thinned[0] is points[0]
+    assert thinned[-1] is points[-1]
+    # Short lists pass through untouched.
+    short = points[:10]
+    assert _thin_points(short, max_points=60) is short
 
 
 def test_dispatch_unknown_route(built: Path) -> None:

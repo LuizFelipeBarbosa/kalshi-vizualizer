@@ -7,7 +7,7 @@ import type { Ref } from "react";
 import uPlot from "uplot";
 
 import type { EventDetail, SeriesEntry } from "../api/types";
-import { OVERLAY_PALETTE, drawRail, observeResize, pctAxis, timeAxis, tooltipPlugin } from "../charts/uplot";
+import { OVERLAY_PALETTE, drawRail, observeResize, priceAxis, timeAxis, tooltipPlugin } from "../charts/uplot";
 import { escapeHtml, fmtDateTime } from "../lib/format";
 
 export interface OverlayLabel {
@@ -96,7 +96,7 @@ export default function EventChart({
           (l) =>
             `<div class="t-row"><span><span class="dot" style="background:${l.m.color}"></span>${escapeHtml(
               l.m.title
-            )}</span><span>${l.pct}%</span></div>`
+            )}</span><span>${l.pct}¢</span></div>`
         )
         .join("");
       return `<div class="t-date">${fmtDateTime(t)}</div>${rows}`;
@@ -107,7 +107,7 @@ export default function EventChart({
         width: el.clientWidth || 800,
         height: 360,
         scales: { y: { range: [0, 1] } },
-        axes: [timeAxis(), pctAxis()],
+        axes: [timeAxis(), priceAxis()],
         legend: { show: false },
         focus: { alpha: 0.25 },
         cursor: { focus: { prox: 24 } },
