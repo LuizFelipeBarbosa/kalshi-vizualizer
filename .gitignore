@@ -28,3 +28,7 @@ fig
 *.tar.zst
 output
 .tmp
+
+# Node (frontend/)
+node_modules
+*.tsbuildinfo

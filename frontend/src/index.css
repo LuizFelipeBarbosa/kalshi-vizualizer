@@ -1,0 +1,103 @@
+/* ============================================================================
+   Kalshi · Tape — a trading-desk research terminal as quiet editorial data.
+   Tailwind v4: the design tokens from the old static/css/app.css live in @theme,
+   so utilities like bg-bg-0 / text-ink-1 / border-line come straight from them.
+   ========================================================================== */
+
+@import "tailwindcss";
+
+@theme {
+  --color-bg-0: #0b0e14;
+  --color-bg-1: #121620;
+  --color-bg-2: #1a1f2b;
+  --color-line: #232938;
+  --color-ink-0: #e6e9f0;
+  --color-ink-1: #9aa3b2;
+  --color-ink-2: #5c6575;
+  --color-rail: #3a4358;
+  --color-yes: #36d399;
+  --color-no: #f25c66;
+
+  --font-mono: "IBM Plex Mono", "SF Mono", "Cascadia Code", ui-monospace, Menlo, monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --text-2xs: 0.6875rem;
+  --text-title: 1.7rem;
+  --text-mega: 2.6rem;
+
+  --animate-spot-in: spot-in 240ms ease-out;
+  @keyframes spot-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    background-color: var(--color-bg-0);
+    color: var(--color-ink-0);
+    /* The reference design relies on the browser default line-height, not preflight's 1.5. */
+    line-height: normal;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* uPlot tooltip — the chart plugin injects this as raw DOM, so it needs real CSS
+   classes rather than utilities in JSX. Values reference the @theme variables. */
+.u-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-ink-0);
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 80ms;
+}
+.u-tooltip.is-on {
+  opacity: 1;
+}
+.u-tooltip .t-date {
+  color: var(--color-ink-1);
+  margin-bottom: 2px;
+}
+.u-tooltip .t-row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+.u-tooltip .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.u-tooltip .t-up {
+  color: var(--color-yes);
+}
+.u-tooltip .t-down {
+  color: var(--color-no);
+}
+
+/* uPlot's drag-zoom selection box defaults to rgba(0,0,0,0.07) — invisible on bg-0. */
+.u-select {
+  background: rgba(91, 143, 249, 0.12);
+}

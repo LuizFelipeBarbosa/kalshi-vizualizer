@@ -69,6 +69,40 @@ def test_event_and_contract(client: TestClient) -> None:
     assert missing_event.json() == {"error": "event not found"}
 
 
+def test_highlights_nonempty_and_computed_once(
+    tmp_path: Path,
+    kalshi_trades_dir: Path,
+    kalshi_markets_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out = tmp_path / "data"
+    build_site_dataset(
+        trades_dir=kalshi_trades_dir,
+        markets_dir=kalshi_markets_dir,
+        out_dir=out,
+        n_buckets=50,
+    )
+
+    from src.visualize import queries
+
+    calls = {"n": 0}
+
+    def counting_handle_highlights(con: object) -> dict[str, object]:
+        calls["n"] += 1
+        return queries.handle_highlights(con)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("src.visualize.app.handle_highlights", counting_handle_highlights)
+    with TestClient(create_app(out)) as c:
+        first = c.get("/api/highlights")
+        second = c.get("/api/highlights")
+
+    assert first.status_code == 200
+    body = first.json()
+    assert body["highlights"] and body["categories"]
+    assert second.json() == body
+    assert calls["n"] == 1  # cached after the first request
+
+
 def test_unknown_api_route_returns_json_error(client: TestClient) -> None:
     r = client.get("/api/nope")
     assert r.status_code == 404
